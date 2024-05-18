@@ -3,12 +3,15 @@ package com.example.codequalityanalysis
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.vfs.VirtualFile
-import java.util.HashMap
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
 
 class CodeQualityAnalysisAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project
         project?.let {
+            val report = StringBuilder()
             val totalCount = countLinesOfCode(project.baseDir)
             val commentCount = countCommentLines(project.baseDir)
             val complexity = calculateCyclomaticComplexity(project.baseDir)
@@ -17,39 +20,51 @@ class CodeQualityAnalysisAction : AnAction() {
 
             val commentRatio = if (totalCount > 0) commentCount.toDouble() / totalCount else 0.0
 
-            println("Total lines of code: $totalCount")
-            println("Comment lines: $commentCount")
-            println("Comment to code ratio: ${String.format("%.2f", commentRatio)}")
+            report.appendLine("Total lines of code: $totalCount")
+            report.appendLine("Comment lines: $commentCount")
+            report.appendLine("Comment to code ratio: ${String.format("%.2f", commentRatio)}")
             val commentLevel = when {
                 commentRatio < 0.05 -> "Few comments to the code length (5-10% of the code length is the minimum number of comments)"
                 commentRatio < 0.2 -> "Moderate amount of comments on code length (10-20% of code length)"
                 else -> "A large number of comments on the code length (more than 20% of the code length)"
             }
-            println("Comment level: $commentLevel")
+            report.appendLine("Comment level: $commentLevel")
 
-            println("Total Cyclomatic Complexity: $complexity")
+            report.appendLine("Total Cyclomatic Complexity: $complexity")
             val complexityLevel = when {
                 complexity < totalCount * 0.05 -> "Low cyclomatic complexity (5-10% of the code length is the minimum complexity)"
                 complexity < totalCount * 0.2 -> "Moderate cyclomatic complexity (10-20% of the code length)"
                 else -> "High cyclomatic complexity (more than 20% of the code length)"
             }
-            println("Cyclomatic complexity level: $complexityLevel")
+            report.appendLine("Cyclomatic complexity level: $complexityLevel")
 
-            println("Maximum Nesting Depth: $maxDeep")
+            report.appendLine("Maximum Nesting Depth: $maxDeep")
             val nestingDepthLevel = when {
                 maxDeep < totalCount * 0.05 -> "Low nesting depth in loops (5-10% of the code length is the minimum nesting depth)"
                 maxDeep < totalCount * 0.2 -> "Moderate nesting depth in loops (10-20% of the code length)"
                 else -> "High nesting depth in loops (more than 20% of the code length)"
             }
-            println("Nesting depth level: $nestingDepthLevel")
+            report.appendLine("Nesting depth level: $nestingDepthLevel")
 
-            println("Total Duplicate Lines: $duplicateLines")
+            report.appendLine("Total Duplicate Lines: $duplicateLines")
             val duplicateLinesLevel = when {
                 duplicateLines < totalCount * 0.05 -> "Few duplicated lines in the code (5-10% of the code length is the minimum number of duplicates)"
                 duplicateLines < totalCount * 0.2 -> "Moderate amount of duplicated lines in the code (10-20% of the code length)"
                 else -> "A large number of duplicated lines in the code (more than 20% of the code length)"
             }
-            println("Duplicate lines level: $duplicateLinesLevel")
+            report.appendLine("Duplicate lines level: $duplicateLinesLevel")
+            saveReportToFile(project.baseDir, report.toString())
+        }
+    }
+
+    private fun saveReportToFile(baseDir: VirtualFile, report: String) {
+        try {
+            val reportFile = File(baseDir.path, "code_quality_report.txt")
+            FileWriter(reportFile).use { writer ->
+                writer.write(report)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
